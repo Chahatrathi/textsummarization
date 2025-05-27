@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit Summarizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        h1 {
+            color: #0056b3;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #summaries {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .summary-item {
+            background-color: #e9ecef;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+        }
+        .summary-item h2 {
+            color: #007bff;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Reddit Post Summarizer</h1>
+        <form id="summarizeForm">
+            <label for="url">Enter Reddit Post URL:</label>
+            <input type="text" id="url" name="url" placeholder="e.g., https://www.reddit.com/r/technology/comments/..." />
+            <button type="submit">Summarize</button>
+        </form>
+        <div id="summaries">
+            </div>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        document.getElementById('summarizeForm').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Prevent default form submission
+    
+            const url = document.getElementById('url').value;
+            const summariesDiv = document.getElementById('summaries');
+            const errorDiv = document.getElementById('error');
+    
+            summariesDiv.innerHTML = ''; // Clear previous summaries
+            errorDiv.innerHTML = ''; // Clear previous errors
+    
+            if (!url) {
+                errorDiv.innerHTML = 'Please enter a URL.';
+                return;
+            }
+    
+            // Add a loading indicator
+            summariesDiv.innerHTML = '<p>Generating summary, please wait...</p>';
+    
+            try {
+                const formData = new FormData();
+                formData.append('url', url);
+    
+                const response = await fetch('/summarize', {
+                    method: 'POST',
+                    body: formData
+                });
+    
+                const data = await response.json();
+    
+                if (response.ok) {
+                    if (data.summaries && data.summaries.length > 0) {
+                        summariesDiv.innerHTML = ''; // Clear loading indicator
+                        data.summaries.forEach(item => {
+                            const summaryItem = document.createElement('div');
+                            summaryItem.className = 'summary-item';
+                            // Corrected line: Use template literals to inject title and summary
+                            const title = item.title ? String(item.title) : 'No Title'; // Ensure it's a string
+                            const summary = item.summary ? String(item.summary) : 'No Summary Available.'; // Ensure it's a string
+                            summaryItem.innerHTML = `<h2>${title}</h2><p>${summary}</p>`;
+                            summariesDiv.appendChild(summaryItem);
+                        });
+                    } else {
+                        summariesDiv.innerHTML = '<p>No summary generated. The provided URL might not be a valid Reddit post or the content could not be processed.</p>';
+                    }
+                } else {
+                    summariesDiv.innerHTML = ''; // Clear loading indicator
+                    errorDiv.innerHTML = `Error: ${data.error || 'Something went wrong on the server.'}`;
+                }
+            } catch (error) {
+                summariesDiv.innerHTML = ''; // Clear loading indicator
+                errorDiv.innerHTML = `An unexpected error occurred: ${error.message}`;
+                console.error('Fetch error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
